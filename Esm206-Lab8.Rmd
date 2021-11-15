@@ -1,0 +1,139 @@
+---
+title: "Lab 8"
+author: "Cristina Robinson"
+date: "11/15/2021"
+output: html_document
+---
+
+```{r setup, include = TRUE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+# attach packages
+library(tidyverse)
+library(corrplot)
+library(stargazer)
+library(broom)
+library(modelsummary)
+library(here)
+```
+## Read in data
+```{r}
+homes <- read_csv(here("slo_homes.csv")) # read in using here function
+```
+
+A little bit of cleaning:
+
+Make a subset called homes_sub that only contains observations (rows) where the city is:
+- San Luis Obispo
+- Arroyo Grande
+- Atascadero
+- Santa Maria-Orcutt
+
+```{r}
+homes_sub <- homes %>% # create new subset of chosen cities
+  filter(City %in% c("San Luis Obispo", "Arroyo Grande", "Atascadero", "Santa Maria-Orcutt"))
+```
+
+## Do a little exploring of our data
+
+Summary statistics (home price, based on city and sale status)
+
+- Find & return in a nice summary table the mean and standard deviation of home price, grouped by city and sale status
+```{r}
+summary_table <- homes_sub %>% # to make a new data frame
+  group_by(City, Status) %>%
+  summarize(mean_price = mean(Price, na.rm = TRUE),
+            sd_price = sd(Price, na.rm = TRUE))
+```
+```{r}
+homes_sub %>% # to make just a summary table 
+  group_by(City, Status) %>%
+  summarize(mean_price = mean(Price, na.rm = TRUE),
+            sd_price = sd(Price, na.rm = TRUE))
+
+# actually I don't even want to run this code: `eval = FALSE`
+
+ggplot(data = homes_sub, aes(x = Price)) +
+  geom_density(aes(color = City, fill = City), alpha = 0.3) + #alpha is outside to apply transparency for all variables
+  scale_x_continuous(limits = c(0, 3e6)) # change conditions about x-axis for continuous variables 
+```
+
+Explore the relationship (visual data exploration) between square footage and home price. Change the point COLOR by City, and the point shape by sale status. 
+```{r}
+ggplot(data = homes_sub, aes(x = SqFt, y = Price)) + # plot square footage vs. price 
+  geom_point() + # basic scatter plot 
+  geom_smooth(method = lm) # add linear regression 
+  
+```
+## Model the relationship with home price as dependent variable
+
+```{r}
+homes_lm1 <- lm(Price ~ City + Bedrooms + Bathrooms + SqFt + PricePerSqFt + Status, data = homes_sub)
+
+# Make a subset that only contains the quantitative variables
+homes_quant <- homes_sub %>%
+  select(Price:PricePerSqFt) # use select for columns desired
+
+homes_cor <- cor(homes_quant)
+homes_cor
+
+corrplot(homes_cor, method = 'ellipse') # create plot of correlation using last data set, method changes shape of data points
+
+# How would I explore diagnostic plots?
+plot(homes_lm1)
+```
+
+Try another model (homes_lm2) where we simplify this a bit:
+
+- City
+- SqFt
+- Status
+
+```{r}
+homes_lm2 <- lm(Price ~ City + SqFt + Status, data = homes_sub) # create a second model
+ 
+# or just call for this in the console
+homes_lm2
+
+plot(homes_lm2)
+```
+
+Summary of the `homes_lm1` model: 
+  "84% of the variance in home price is explained by the predictor variables, including city,       square footage, and status"
+
+Adjusted R-squared for multiple linear regression (vs. the multiple R-squared).
+
+Find the AIC value of each model:
+
+```{r}
+# lower AIC values represent better fit for models and complexity 
+AIC(homes_lm1)
+AIC(homes_lm2)
+```
+
+Try another permutation of this model that you think might make sense, check out & compare the model fit, outputs, and AIC value. 
+
+```{r}
+homes_lm3 <- lm(Price ~ City + Bedrooms + SqFt + Status, data = homes_sub) # create a second model
+ 
+# or just call for this in the console
+homes_lm3
+
+plot(homes_lm3)
+```
+
+```{r}
+# compare all 3 models AIC scores
+AIC(homes_lm1)
+AIC(homes_lm2)
+AIC(homes_lm3)
+```
+
+Use `modelsummary` to show model outputs side-by-side (could also use `stargazer`:
+
+If you use `modelsummary` to return model outputs of multiple models, it wants you to feed it to it as a list. 
+```{r}
+modelsummary(list(homes_lm1, homes_lm2, homes_lm3))
+```
+
+
