@@ -136,4 +136,15 @@ If you use `modelsummary` to return model outputs of multiple models, it wants y
 modelsummary(list(homes_lm1, homes_lm2, homes_lm3))
 ```
 
+## Start making predictions with this model 
+
+Use `broom::augment()`
+
+```{r}
+homes_predicted <- augment(homes_lm1)
+```
+
+Use the `predict()` function to tru out your model on new scenarios that you create. 
+
+# MY UPDATE!!!
 
